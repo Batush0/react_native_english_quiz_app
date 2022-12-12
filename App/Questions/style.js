@@ -1,34 +1,56 @@
 import style from "../style";
 import { StyleSheet, Dimensions } from "react-native";
 
-let CIRCLE_RADIUS = 36;
-let Window = Dimensions.get("window");
-export default StyleSheet.create({
-  mainContainer: {
-    flex: 1,
-    margin: 0,
-    padding: 0,
+module.exports = StyleSheet.create({
+  viewPort: {
+    backgroundColor: style.secondary,
+    minHeight: "100%",
   },
-  dropZone: {
-    height: 100,
-    backgroundColor: "#2c3e50",
+
+  question: {
+    fontSize: 20,
+    color: style.tertiary,
+    marginHorizontal: 15,
   },
-  text: {
-    marginTop: 25,
-    marginLeft: 5,
-    marginRight: 5,
-    textAlign: "center",
-    color: "#fff",
+  questionContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 80,
+    display: "flex",
+    flexDirection: "row",
+    backgroundColor: style.secondary,
   },
-  draggableContainer: {
-    position: "absolute",
-    top: Window.height / 2 - CIRCLE_RADIUS,
-    left: Window.width / 2 - CIRCLE_RADIUS,
+  blankAnswer: {
+    fontSize: 20,
+    color: style.primary,
   },
-  circle: {
-    backgroundColor: "#1abc9c",
-    width: CIRCLE_RADIUS * 2,
-    height: CIRCLE_RADIUS * 2,
-    borderRadius: CIRCLE_RADIUS,
+  correctAnswer: {
+    color: "#2f2",
+    fontSize: 20,
+  },
+  incorrectAnswer: {
+    color: "#9b111e",
+    fontSize: 20,
+  },
+
+  answersContainer: {
+    marginTop: 90,
+    borderTopColor: "black",
+    // borderTopWidth: 1,
+    backgroundColor: style.secondary,
+  },
+
+  answerContainer: {
+    marginVertical: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    width: 120,
+    marginLeft: 30,
+    borderRadius: 15,
+    backgroundColor: style.primary,
+  },
+
+  answer: {
+    fontSize: 20,
+    color: "#222",
   },
 });

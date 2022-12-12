@@ -1,48 +1,7 @@
 import React from "react";
 import { StyleSheet, View, Text, Animated, PanResponder } from "react-native";
 
-const styles = StyleSheet.create({
-  question: {
-    fontSize: 20,
-    color: "white",
-  },
-  questionContainer: {
-    backgroundColor: "#2c3e50",
-    paddingHorizontal: 20,
-    paddingVertical: 50,
-  },
-  answersContainer: {
-    backgroundColor: "#bf30fa",
-    marginTop: 50,
-  },
-  answersHeader: {
-    fontSize: 15,
-    color: "#f0b0cc",
-  },
-  answerContainer: {
-    marginVertical: 30,
-    borderColor: "#ff00ff",
-    borderWidth: 2,
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    backgroundColor: "#f2f2f0",
-  },
-  answer: {
-    fontSize: 20,
-    color: "#fff",
-  },
-  selectedAnswer: {
-    borderColor: "#555",
-  },
-  correctAnswer: {
-    color: "#2f2",
-    fontSize: 20,
-  },
-  incorrectAnswer: {
-    color: "#f22",
-    fontSize: 20,
-  },
-});
+const styles = require("./style");
 
 class Answer extends React.Component {
   constructor(props) {
@@ -50,6 +9,7 @@ class Answer extends React.Component {
     this.state = {
       pan: new Animated.ValueXY(),
     };
+
     this.panResponder = PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onPanResponderMove: Animated.event([
@@ -57,16 +17,15 @@ class Answer extends React.Component {
         { dx: this.state.pan.x, dy: this.state.pan.y },
       ]),
       onPanResponderRelease: (e, gesture) => {
-        //  cevabı yerine yerleştir
+        var speed = 1;
         if (this.isDropZone(gesture)) {
-          //   this.props.setAnswer
-          console.log(this.props.children);
-        } else {
-          Animated.spring(this.state.pan, {
-            speed: 1,
-            toValue: { x: 0, y: 0 },
-          }).start();
+          this.props.viewPort.setAnswer(this.props.children);
+          speed = 200;
         }
+        Animated.spring(this.state.pan, {
+          speed: speed,
+          toValue: { x: 0, y: 0 },
+        }).start();
       },
     });
   }
@@ -77,24 +36,32 @@ class Answer extends React.Component {
   }
 
   render() {
+    const responder =
+      this.props.viewPort.state.suspendedAnswer === null
+        ? this.panResponder.panHandlers
+        : {};
     return (
       <View>
         <Animated.View
-          {...this.panResponder.panHandlers}
+          {...responder}
           style={[this.state.pan.getLayout(), styles.answerContainer]}
         >
-          <Text style={[styles.answer]}>{this.props.children}</Text>
+          <Text style={[styles.answer]}>{`${choiceChars[this.props.index]})   ${
+            this.props.children
+          }`}</Text>
         </Animated.View>
       </View>
     );
   }
 }
 
+const choiceChars = ["A", "B", "C", "D", "E", "F", "G", "H"];
+
 class ViewPort extends React.Component {
   constructor(props) {
     super(props);
     this.state = { suspendedAnswer: null, questionZoneValues: null };
-    this.script = "Bir yıl 365 gündür";
+    this.script = "Bir yıl 365 gündür"; //TODO: sentence uzayınca düzen bozuluyor
     this.answer = "365";
     this.question = this.script.split(` ${this.answer} `); //api'dan gelecek
     this.answers = [400, 252, 309, 365]; //api'da üretilip dağıtılacak
@@ -102,6 +69,20 @@ class ViewPort extends React.Component {
 
   setAnswer(answer) {
     this.setState({ suspendedAnswer: answer });
+    this.setAnswers();
+  }
+
+  setAnswers() {
+    this._answers = this.answers.map((data, index) => (
+      <Answer
+        questionZoneValues={this.state.questionZoneValues}
+        viewPort={this}
+        draggable={this.state.suspendedAnswer === null ? true : false}
+        index={index}
+      >
+        {data}
+      </Answer>
+    ));
   }
 
   setQuestionZoneValues(event) {
@@ -110,26 +91,16 @@ class ViewPort extends React.Component {
     });
   }
   render() {
-    const answers = this.answers.map((data) => (
-      <Answer
-        questionZoneValues={this.state.questionZoneValues}
-        setAnswer={this.setAnswer}
-      >
-        {data}
-      </Answer>
-    ));
+    this.setAnswers();
     return (
-      <View>
+      <View style={styles.viewPort}>
         <Question
           onLayout={this.setQuestionZoneValues.bind(this)}
           question={this.question}
           suspendedAnswer={this.state.suspendedAnswer}
           answer={this.answer}
         />
-        <View style={styles.answersContainer}>
-          <Text style={styles.answersHeader}>Answers</Text>
-          {answers}
-        </View>
+        <View style={styles.answersContainer}>{this._answers}</View>
       </View>
     );
   }
@@ -141,7 +112,6 @@ class Question extends React.Component {
   }
 
   render() {
-    //TODO: questionContainer flex olacak
     return (
       <View style={styles.questionContainer} onLayout={this.props.onLayout}>
         <Text style={styles.question}>{this.props.question[0]}</Text>
@@ -149,15 +119,15 @@ class Question extends React.Component {
           <Text
             style={[
               this.props.suspendedAnswer != null
-                ? this.props.suspendedAnswer === this.props.answer
+                ? this.props.suspendedAnswer == this.props.answer
                   ? styles.correctAnswer
                   : styles.incorrectAnswer
-                : styles.answer,
+                : styles.blankAnswer,
             ]}
           >
-            {this.props.suspendedAnswer
+            {this.props.suspendedAnswer !== null
               ? this.props.suspendedAnswer
-              : "._._._."}
+              : "......."}
           </Text>
         </View>
         <Text style={styles.question}>{this.props.question[1]}</Text>
@@ -165,7 +135,5 @@ class Question extends React.Component {
     );
   }
 }
-
-//TODO: question filed'a answer sürüklendiğinde answer yerine dönecek ve style değiştirecek
 
 module.exports = ViewPort;
