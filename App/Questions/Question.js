@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { StyleSheet, View, Text, Animated, PanResponder } from "react-native";
 
 const styles = require("./style");
@@ -57,17 +57,51 @@ class Answer extends React.Component {
 
 const choiceChars = ["A", "B", "C", "D", "E", "F", "G", "H"];
 
+module.exports = function LoadData(props) {
+  const [_data, _setData] = useState({});
+
+  const getData = async () => {
+    const response = await fetch(
+      `http://10.0.2.2:8080/question?chapter_id=${props.route.params.chapter_id}&question_id=${props.route.params.question_id}`
+    );
+    const data = await response.json();
+    _setData({ ...data });
+  };
+
+  useEffect(() => {
+    getData();
+  }, []);
+
+  if (!_data.question)
+    return (
+      <View>
+        <Text>Yükleniyor ...</Text>
+      </View>
+    );
+  var passable = { ..._data };
+  passable["route"] = props.route.params;
+  return <ViewPort {...passable} />;
+};
+
 class ViewPort extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { suspendedAnswer: null, questionZoneValues: null };
-    this.script = "Bir yıl 365 gündür"; //TODO: sentence uzayınca düzen bozuluyor
-    this.answer = "365";
-    this.question = this.script.split(` ${this.answer} `); //api'dan gelecek
-    this.answers = [400, 252, 309, 365]; //api'da üretilip dağıtılacak
+    this.state = { suspendedAnswer: null, questionZoneValues: null }; //TODO: suspended api'dan gelecek
+    this.question = props.question;
+    this.answers = props.choices;
+    this.isCorrect;
   }
 
-  setAnswer(answer) {
+  async setAnswer(answer) {
+    //checking answer's accuracy
+    await fetch(
+      `http://10.0.2.2:8080/checkAnswer?chapter_id=${this.props.route.chapter_id}&question_id=${this.props.route.question_id}&choice=${answer}`,
+      { method: "PATCH" }
+    )
+      .then((response) => response.json())
+      .then(({ state }) => {
+        this.isCorrect = state;
+      });
     this.setState({ suspendedAnswer: answer });
     this.setAnswers();
   }
@@ -98,7 +132,7 @@ class ViewPort extends React.Component {
           onLayout={this.setQuestionZoneValues.bind(this)}
           question={this.question}
           suspendedAnswer={this.state.suspendedAnswer}
-          answer={this.answer}
+          isCorrect={this.isCorrect}
         />
         <View style={styles.answersContainer}>{this._answers}</View>
       </View>
@@ -119,7 +153,7 @@ class Question extends React.Component {
           <Text
             style={[
               this.props.suspendedAnswer != null
-                ? this.props.suspendedAnswer == this.props.answer
+                ? this.props.isCorrect == true
                   ? styles.correctAnswer
                   : styles.incorrectAnswer
                 : styles.blankAnswer,
@@ -135,5 +169,3 @@ class Question extends React.Component {
     );
   }
 }
-
-module.exports = ViewPort;

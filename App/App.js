@@ -12,7 +12,6 @@ import Question from "./Questions/Question";
 
 export default function App() {
   return (
-    /**
     <NavigationContainer>
       <Stack.Navigator
         screenOptions={{
@@ -21,9 +20,8 @@ export default function App() {
       >
         <Stack.Screen name="chapters" component={Chapters} />
         <Stack.Screen name="questions" component={Questions} />
+        <Stack.Screen name="question" component={Question} />
       </Stack.Navigator>
     </NavigationContainer>
-     */
-    <Question />
   );
 }

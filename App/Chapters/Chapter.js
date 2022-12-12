@@ -4,7 +4,7 @@ import color from "../style";
 
 export default ({ completed, name, id, navigation }) => {
   const onTouchStart = () => {
-    navigation.navigate("questions");
+    navigation.navigate("questions", { chapter_id: id });
   };
 
   return (

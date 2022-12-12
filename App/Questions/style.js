@@ -17,6 +17,7 @@ module.exports = StyleSheet.create({
     paddingTop: 80,
     display: "flex",
     flexDirection: "row",
+    maxWidth: "90%",
     backgroundColor: style.secondary,
   },
   blankAnswer: {
@@ -43,7 +44,8 @@ module.exports = StyleSheet.create({
     marginVertical: 20,
     paddingVertical: 10,
     paddingHorizontal: 20,
-    width: 120,
+    alignSelf: "flex-start",
+    width: "auto",
     marginLeft: 30,
     borderRadius: 15,
     backgroundColor: style.primary,
