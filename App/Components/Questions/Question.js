@@ -135,6 +135,7 @@ class ViewPort extends React.Component {
           isCorrect={this.isCorrect}
         />
         <View style={styles.answersContainer}>{this._answers}</View>
+        {/* exem'den çıkma (sonra kalınan yerden devam edilebilir) */}
       </View>
     );
   }
@@ -144,27 +145,14 @@ class Question extends React.Component {
   constructor(props) {
     super(props);
   }
-
   render() {
     return (
       <View style={styles.questionContainer} onLayout={this.props.onLayout}>
-        <Text style={styles.question}>{this.props.question[0]}</Text>
-        <View style={styles.answer}>
-          <Text
-            style={[
-              this.props.suspendedAnswer != null
-                ? this.props.isCorrect == true
-                  ? styles.correctAnswer
-                  : styles.incorrectAnswer
-                : styles.blankAnswer,
-            ]}
-          >
-            {this.props.suspendedAnswer !== null
-              ? this.props.suspendedAnswer
-              : "......."}
-          </Text>
-        </View>
-        <Text style={styles.question}>{this.props.question[1]}</Text>
+        <Text style={styles.question}>{`${this.props.question[0]}  |${
+          this.props.suspendedAnswer === null
+            ? "........"
+            : this.props.suspendedAnswer
+        }| ${this.props.question[1]}`}</Text>
       </View>
     );
   }

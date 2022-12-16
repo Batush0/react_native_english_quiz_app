@@ -6,7 +6,7 @@ import {
   Text,
   View,
 } from "react-native";
-import style from "../style";
+import style from "../../style";
 export default () => {
   return (
     <View style={styles.container}>

@@ -1,115 +1,127 @@
 const express = require("express");
 const port = 8080;
 const app = express();
-const mysql = require("mysql");
-require("dotenv").config();
+const jwt = require("jsonwebtoken");
+
+const database = require("./Storage/Mysql");
 
 app.use(express.json());
-
-const connection = mysql.createConnection({
-  host: `${process.env.MYSQL_HOST}`,
-  user: `${process.env.MYSQL_USER}`,
-  password: `${process.env.MYSQL_PASSWORD}`,
-  database: `${process.env.MYSQL_DATABASE}`,
-});
-
-connection.connect((error) => {
-  if (error) throw error;
-  console.log("mysql connected");
-});
 
 app.get("/", (req, res) => {
   res.send("selam");
 });
 
-app.get("/chapter", (req, res) => {
-  if (req.query.id === undefined) return res.sendStatus(406);
-  connection.query(
-    `select soru_no from sorular where fchapter_id = ${req.query.id}`,
-    (e, result) => {
-      if (!result.length) return res.sendStatus(204);
-      res.json(result);
-    }
-  );
+function authenticateToken(req, res, next) {
+  try {
+    const authHeader = req.headers["authorization"];
+    const token = authHeader && authHeader.split(" ")[1]; //access token
+    if (token == null) return res.sendStatus(401);
+    const { username } = req.query;
+    if (username === undefined) return res.sendStatus(406);
+
+    database
+      .authenticateToken(username)
+      .then(({ secret_access_token, id }) => {
+        jwt.verify(token, secret_access_token, (err, user) => {
+          if (err) return res.sendStatus(403);
+          user["id"] = id;
+          req.user = user;
+          next();
+        });
+      })
+      .catch((error) => {
+        res.send(error);
+      });
+  } catch (error) {
+    res.sendStatus(400);
+  }
+}
+
+app.get("/languages", authenticateToken, (req, res) => {
+  res.send(database.getLanguages());
 });
-app.get("/chapters", (req, res) => {
-  connection.query(`select * from chapter`, (e, result) => {
-    res.json(result);
-  });
+
+app.get("/chapters", authenticateToken, (req, res) => {
+  database
+    .getChapters(req.query.language)
+    .then((chapters) => {
+      res.json(chapters);
+    })
+    .catch((error) => {
+      if (error.cause) return res.send(error.cause);
+      res.sendStatus(400);
+    });
 });
 
-const numOfchoice = 4;
+app.get("/questions", authenticateToken, (req, res) => {
+  try {
+    const { language, chapter, on } = req.query;
 
-app.get("/question", (req, res) => {
-  if (req.query.chapter_id === undefined || req.query.question_id === undefined)
-    res.sendStatus(406);
+    database
+      .getQuestions(language, chapter, on, req.user.username)
+      .then((bundle) => res.json(bundle))
+      .catch((error) => {
+        if (error.cause) return res.send(error.cause);
+        res.sendStatus(400);
+      });
+  } catch (error) {
+    res.sendStatus(400);
+  }
+});
 
-  //soruyu seçme
-  connection.query(
-    `select soru,soru_id from sorular where fchapter_id = ${req.query.chapter_id} and  soru_id = ${req.query.question_id}`,
-    (e, result) => {
-      if (!result.length) return res.sendStatus(204);
+app.get("/quiz", authenticateToken, (req, res) => {
+  const { language, chapter, on } = req.query;
+  if (on == undefined) return res.sendStatus(406);
+  database
+    .quiz(language, chapter, on)
+    .then((payload) => res.json(payload))
+    .catch((error) => {
+      if (error.cause) return res.send(error.cause);
+      res.sendStatus(400);
+    });
+});
 
-      //asıl cevabı seçme
-      connection.query(
-        `select cevap from cevaplar where fsoru_id = ${result[0].soru_id}`,
-        (error, _result) => {
-          if (!_result.length) return res.sendStatus(204);
+app.post("/check", authenticateToken, (req, res) => {
+  const { language, on } = req.query;
+  const { answers } = req.body;
+  if (on == undefined || answers == undefined) return res.sendStatus(406);
 
-          //tüm soruları alma
-          connection.query(
-            `select cevap from cevaplar where fsoru_id <> ${result[0].soru_id}`,
-            (er, result_) => {
-              //asıl cevabı cevapların arasına kaynaştırma
-              const actualAnswerQueue = Math.floor(Math.random() * numOfchoice);
-              var answers = [];
-
-              //rastgele cevaplar seçme
-              for (i = 0; i < numOfchoice; i++) {
-                if (i == actualAnswerQueue) {
-                  answers.push(_result[0].cevap);
-                  continue;
-                }
-                const selected_id = Math.floor(Math.random() * result_.length);
-                const selected_answer = result_[selected_id].cevap;
-                if (answers.includes(selected_answer)) {
-                  i--;
-                  continue;
-                }
-                answers.push(selected_answer);
-              }
-              const question = result[0].soru.split(`${_result[0].cevap}`);
-              res.json({
-                question: question,
-                choices: answers,
-              });
-            }
+  try {
+    database
+      .getAnswers(language, on)
+      .then((actualAnswers) => {
+        actualAnswers.forEach((actual, index) => {
+          const accuracy = answers[index] === actual.cevap.toLowerCase();
+          database.logAnswerSolidition(
+            accuracy,
+            req.user.username,
+            actual.cevap_id,
+            language
           );
-        }
-      );
-    }
-  );
+        });
+        res.sendStatus(202);
+      })
+      .catch((error) => {
+        if (error.cause) res.send(error.cause);
+      });
+  } catch (e) {
+    res.sendStatus(400);
+  }
 });
 
-app.patch("/checkAnswer", (req, res) => {
-  if (
-    req.query.chapter_id === undefined ||
-    req.query.question_id === undefined ||
-    req.query.choice === undefined
-  )
-    res.sendStatus(406);
-
-  connection.query(
-    `select cevap from cevaplar where cevap_id = ${req.query.question_id}`,
-    (e, result) => {
-      if (!result.length) return res.sendStatus(204);
-      if (result[0].cevap != req.query.choice) return res.send({ state: 0 }); //incorrect
-      res.send({ state: 1 }); //correct
-      //TODO: sonuçları saklama
-    }
-  );
+app.get("/soliditions", authenticateToken, (req, res) => {
+  const { language, on } = req.query;
+  if (on == undefined) res.sendStatus(406);
+  database
+    .getSolves(req.user.username, language, on)
+    .then((data) => {
+      res.json({ solves: data });
+    })
+    .catch((error) => {
+      if (error.cause) res.send(error.cause);
+    });
 });
 
 app.listen(port, () => {
-  console.log(port + " listening");
+  console.log("Port " + port + " on fire 🔥🔥");
 });

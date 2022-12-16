@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { View, Text, ScrollView, StyleSheet } from "react-native";
-import style from "../style";
+import style from "../../style";
 module.exports = ({ navigation, route }) => {
   const [questions, setQuestions] = useState([]);
   const getQuestions = async () => {

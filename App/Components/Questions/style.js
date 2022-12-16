@@ -1,4 +1,4 @@
-import style from "../style";
+import style from "../../style";
 import { StyleSheet, Dimensions } from "react-native";
 
 module.exports = StyleSheet.create({
@@ -17,7 +17,6 @@ module.exports = StyleSheet.create({
     paddingTop: 80,
     display: "flex",
     flexDirection: "row",
-    maxWidth: "90%",
     backgroundColor: style.secondary,
   },
   blankAnswer: {

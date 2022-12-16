@@ -1,4 +1,4 @@
-import style from "../style";
+import style from "../../style";
 import { StyleSheet, Dimensions } from "react-native";
 export default StyleSheet.create({
   view: {
