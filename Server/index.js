@@ -43,7 +43,7 @@ app.get("/languages", authenticateToken, (req, res) => {
 
 app.get("/chapters", authenticateToken, (req, res) => {
   database
-    .getChapters(req.query.language)
+    .getChapters(req.query.language, req.user.id)
     .then((chapters) => {
       res.json(chapters);
     })
@@ -56,12 +56,15 @@ app.get("/chapters", authenticateToken, (req, res) => {
 app.get("/questions", authenticateToken, (req, res) => {
   try {
     const { language, chapter, on } = req.query;
+    if (!on) return res.sendStatus(406);
 
     database
-      .getQuestions(language, chapter, on, req.user.username)
-      .then((bundle) => res.json(bundle))
+      .getQuestions(language, chapter, on, req.user.id) //a1
+      .then((bundle) => {
+        res.json({ bundle: bundle });
+      })
       .catch((error) => {
-        if (error.cause) return res.send(error.cause);
+        if (error) return res.send(error);
         res.sendStatus(400);
       });
   } catch (error) {
@@ -70,13 +73,13 @@ app.get("/questions", authenticateToken, (req, res) => {
 });
 
 app.get("/quiz", authenticateToken, (req, res) => {
-  const { language, chapter, on } = req.query;
+  const { language, chapter, on, related } = req.query;
   if (on == undefined) return res.sendStatus(406);
   database
-    .quiz(language, chapter, on)
+    .quiz(language, chapter, on, related)
     .then((payload) => res.json(payload))
     .catch((error) => {
-      if (error.cause) return res.send(error.cause);
+      if (error.cause) return res.send(error);
       res.sendStatus(400);
     });
 });
@@ -85,24 +88,31 @@ app.post("/check", authenticateToken, (req, res) => {
   const { language, on } = req.query;
   const { answers } = req.body;
   if (on == undefined || answers == undefined) return res.sendStatus(406);
-
   try {
     database
       .getAnswers(language, on)
       .then((actualAnswers) => {
+        var accuracyArray = [];
         actualAnswers.forEach((actual, index) => {
           const accuracy = answers[index] === actual.cevap.toLowerCase();
+          accuracyArray.push(accuracy);
           database.logAnswerSolidition(
             accuracy,
-            req.user.username,
+            req.user.id,
             actual.cevap_id,
             language
           );
         });
-        res.sendStatus(202);
+
+        // res.sendStatus(202);
+        const accuracy = accuracyArray.indexOf(false) == -1;
+        res.json({
+          accuracy: accuracy,
+          lastIndex: actualAnswers[actualAnswers.length - 1].cevap_id,
+        });
       })
       .catch((error) => {
-        if (error.cause) res.send(error.cause);
+        if (error.cause) res.json(error);
       });
   } catch (e) {
     res.sendStatus(400);

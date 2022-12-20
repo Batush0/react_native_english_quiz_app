@@ -1,10 +1,18 @@
-import { View, Image, Text, ProgressBarAndroid, Button } from "react-native";
+import {
+  View,
+  Image,
+  Text,
+  ProgressBarAndroid,
+  Button,
+  AsyncStorage,
+} from "react-native";
 import style from "./style";
 import color from "../../style";
 
-export default ({ completed, name, id, navigation }) => {
+export default ({ completed, name, id, navigation, route_params }) => {
   const onTouchStart = () => {
-    navigation.navigate("questions", { chapter_id: id });
+    // AsyncStorage.setItem("chapter", name);
+    navigation.navigate("questions", { ...route_params, chapter_id: id });
   };
 
   return (
@@ -19,13 +27,17 @@ export default ({ completed, name, id, navigation }) => {
         style={style.image}
       ></Image>
       <Text style={style.text}>{name}</Text>
+
+      {/* 
+      impoertant!
+      API'deki chapter özel accuracy hesaplama sorunu çözüldükten sonra açılacak
       <ProgressBarAndroid
         styleAttr="Horizontal"
         indeterminate={false}
         progress={completed}
         style={style.progress}
         color={color.secondary}
-      />
+      /> */}
     </View>
   );
 };

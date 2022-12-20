@@ -1,4 +1,4 @@
-const { AsyncStorage } = require("react-native");
+import { AsyncStorage } from "react-native";
 
 module.exports = (navigation) => {
   return new Promise(async (resolve, reject) => {
@@ -8,7 +8,6 @@ module.exports = (navigation) => {
     var raw = JSON.stringify({
       refresh_token: await AsyncStorage.getItem("refresh_token"),
     });
-
     const response = await fetch("http://10.0.2.2:8081/token", {
       method: "PATCH",
       headers: myHeaders,
@@ -22,7 +21,8 @@ module.exports = (navigation) => {
         resolve();
       })
       .catch(() => {
-        navigation.navigate("auth");
+        navigation.navigate("auth", {});
+        reject();
       });
   });
 };

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { AsyncStorage, ScrollView, View } from "react-native";
+import { AsyncStorage, ScrollView, View, Text } from "react-native";
 import Loading from "../Loading";
 import setAccessToken from "../../utils/setAccessToken";
+import style from "./style";
 
 module.exports = (props) => {
   const [languages, setLanguages] = useState();
@@ -25,12 +26,13 @@ module.exports = (props) => {
     response
       .json()
       .then((data) => {
-        console.log(data);
         setLanguages(data);
       })
       .catch(async (error) => {
         if (response.status == 403) {
-          setAccessToken(props.navigation);
+          setAccessToken(props.navigation).then(() => {
+            getLanguages();
+          });
         }
       });
   }
@@ -41,16 +43,32 @@ module.exports = (props) => {
 
   if (!languages) return <Loading />;
 
+  function handleSubmit(language) {
+    props.navigation.navigate("chapters", { language: language });
+    // AsyncStorage.setItem("language", language);
+  }
+
+  const langs = languages.map((_lang) => (
+    <Language lang={_lang} handleSubmit={handleSubmit} />
+  ));
+
   return (
     <View>
-      <ScrollView>
-        <View
-          style={{ width: 200, height: 400, backgroundColor: "black" }}
-          onTouchStart={() => {
-            getLanguages();
-          }}
-        ></View>
-      </ScrollView>
+      <ScrollView style={style.scrollView}>{langs}</ScrollView>
+    </View>
+  );
+};
+
+const Language = ({ lang, handleSubmit }) => {
+  const language = lang.charAt(0).toUpperCase() + lang.slice(1);
+  return (
+    <View
+      onTouchStart={() => {
+        handleSubmit(lang);
+      }}
+      style={style.languageContainer}
+    >
+      <Text style={style.languageText}>{language}</Text>
     </View>
   );
 };

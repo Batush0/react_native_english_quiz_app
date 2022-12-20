@@ -6,18 +6,27 @@ module.exports = StyleSheet.create({
     backgroundColor: style.secondary,
     minHeight: "100%",
   },
+  vpFail: {
+    backgroundColor: "#FF8E9E",
+  },
+  vpSc: {
+    backgroundColor: "#DFD3C3",
+  },
 
   question: {
-    fontSize: 20,
+    fontSize: 15,
     color: style.tertiary,
     marginHorizontal: 15,
   },
+  questionsContainer: {
+    // paddingHorizontal: 20,
+    paddingTop: 70,
+  },
   questionContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 80,
+    paddingVertical: 10,
     display: "flex",
     flexDirection: "row",
-    backgroundColor: style.secondary,
+    // backgroundColor: style.secondary,
   },
   blankAnswer: {
     fontSize: 20,
@@ -33,20 +42,20 @@ module.exports = StyleSheet.create({
   },
 
   answersContainer: {
-    marginTop: 90,
+    marginTop: 30,
     borderTopColor: "black",
     // borderTopWidth: 1,
-    backgroundColor: style.secondary,
+    // backgroundColor: style.secondary,
   },
 
   answerContainer: {
-    marginVertical: 20,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+    marginVertical: style.gap * 4,
+    paddingVertical: style.gap * 3,
+    paddingHorizontal: style.gap * 7,
     alignSelf: "flex-start",
     width: "auto",
     marginLeft: 30,
-    borderRadius: 15,
+    borderRadius: style.radius,
     backgroundColor: style.primary,
   },
 
@@ -54,4 +63,26 @@ module.exports = StyleSheet.create({
     fontSize: 20,
     color: "#222",
   },
+  controls: {
+    position: "absolute",
+    right: style.gap * 2,
+    // bottom: style.gap * 12,
+    bottom: style.gap * 302,
+    display: "flex",
+    flexDirection: "row",
+    padding: style.gap * 3,
+    backgroundColor: style.tertiary + "20",
+  },
+  submit: {
+    fontSize: 30,
+    paddingHorizontal: style.gap * 2,
+  },
+  check: {
+    paddingHorizontal: "25%",
+    marginTop: 70,
+    backgroundColor: style.tertiary + "20",
+    borderRadius: style.radius,
+    padding: style.gap * 3,
+  },
+  check_t: { fontSize: 40, color: style.tertiary },
 });

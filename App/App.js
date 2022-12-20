@@ -8,7 +8,7 @@ import style from "./style";
 import Chapters from "./Components/Chapters";
 import Questions from "./Components/Questions";
 const Stack = createNativeStackNavigator();
-// import Question from "./Questions/Question";
+import Question from "./Components/Questions/Question";
 import Auth from "./Components/Auth";
 import Languages from "./Components/Languages";
 
@@ -25,6 +25,7 @@ export default function App() {
         <Stack.Screen name="chapters" component={Chapters} />
         <Stack.Screen name="questions" component={Questions} />
         <Stack.Screen name="languages" component={Languages} />
+        <Stack.Screen name="question" component={Question} />
       </Stack.Navigator>
     </NavigationContainer>
   );

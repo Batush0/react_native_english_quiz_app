@@ -152,20 +152,72 @@ class Mysql {
     return this.languages;
   }
 
-  getChapters(language) {
+  getChapters(language, user_id) {
     return new Promise((resolve, reject) => {
       if (!this.languages.includes(language))
         return reject({ cause: `${language} mevcut bir dil seçeneği değil` });
+      //chapter isimlerini alma
+      var payload = [];
       this.connection.query(
-        `select chapter_ad from ${language}.chapter`,
+        `select chapter_ad , chapter_id from ${language}.chapter`,
         (error, result) => {
           resolve(result);
+          /**
+          result.forEach((chapter, index) => {
+            // for (var index = 0; index < result.length; index++) {
+            // const chapter = result[index];
+            //bölüm başına total soru sayısını bulma
+            this.connection.query(
+              `select count(*) as count from ${language}.sorular where fchapter_id = ${chapter.chapter_id}`,
+              (e, resultQCount) => {
+                
+                //TODO : burada hata var =>> 
+
+                //kullanıcının bölüm başına başarısını bulma
+                this.connection.query(
+                  `select count(*)*${
+                    resultQCount[0].count / 10000
+                  } as accuracy from ${language}.solves where user_id=${user_id} and  accuracy = 1 and question_id in (select soru_no from ${language}.sorular where fchapter_id = ${
+                    chapter.chapter_id
+                  })`,
+                  (_e, resultAccuracy) => {
+                    console.log(resultAccuracy);
+                    payload.push({
+                      accuracy: resultAccuracy[0].accuracy,
+                      chapter: chapter.chapter_ad,
+                    });
+                    // if (index == result.length - 1) resolve(payload);
+                  }
+                );
+              }
+              
+            );
+            //bölüm başına total soru sayısını bulma
+            /**
+                this.connection.query(
+                  `select count(*) as count from ${language}.sorular where fchapter_id = ${chapter.chapter_id}`,
+                  (e, resultQCount) => {
+                    //hesaplama
+                    const accuracy =
+                      resultAccuracy[0].count * (resultQCount[0].count / 100);
+                    payload.push({
+                      accuracy: accuracy,
+                      chapter_ad: chapter.chapter_ad,
+                    });
+                    // console.log(result.length, index);
+                    if (index == result.length - 1) resolve(payload);
+                  }
+                );
+                
+              });
+              */
         }
       );
     });
   }
 
-  getQuestions(language, chapter, on, username) {
+  getQuestions(language, chapter_id, on, username) {
+    const questionCount = 180;
     return new Promise((resolve, reject) => {
       try {
         if (!this.languages.includes(language))
@@ -173,12 +225,15 @@ class Mysql {
 
         //on (en son talep edilen soru id'si) üzerinden 60 adet soru bilgisi isteme
         this.connection.query(
-          `select soru_id from ${language}.sorular fchapter_id where fchapter_id = (select chapter_id from ${language}.chapter where chapter_ad='${chapter}' limit 1) and soru_id > ${this.#sanitizateQuery(
+          `select soru_id from ${language}.sorular fchapter_id where fchapter_id = ${chapter_id} and soru_id > ${this.#sanitizateQuery(
             on
-          )} limit 60`,
+          )} limit ${questionCount}`,
           (error, result) => {
             if (!result) return reject({ cause: "naptın sen !?" });
+            if (result.length <= 4)
+              return reject({ cause: "daha fazla soru bulunmamakta" });
 
+            /**
             //kullanıcının çözdüğü soruları alma
             this.connection.query(
               `select question_id, accuracy from ${language}.solves where user_id=(select id from user.user where username='${username}' limit 1) and  question_id < ${
@@ -199,7 +254,12 @@ class Mysql {
                 });
                 resolve(bundle);
               }
-            );
+            ); */
+            var bundle = [];
+            result.forEach((question) => {
+              bundle.push({ id: question.soru_id });
+            });
+            resolve(bundle);
           }
         );
       } catch (error) {
@@ -207,7 +267,7 @@ class Mysql {
       }
     });
   }
-  quiz(language, chapter, on) {
+  quiz(language, chapter, on, related) {
     return new Promise((resolve, reject) => {
       try {
         if (!this.languages.includes(language))
@@ -215,25 +275,31 @@ class Mysql {
 
         //5 adet soru alma
         this.connection.query(
-          `select * from ${language}.sorular where fchapter_id = (select chapter_id from ${language}.chapter where chapter_ad = '${this.#sanitizateQuery(
-            chapter
-          )}' limit 1) and soru_id > ${this.#sanitizateQuery(on)} limit 5`,
+          `select * from ${language}.sorular where fchapter_id = ${chapter} and soru_id ${
+            related ? ">" : ">="
+          }
+          ${this.#sanitizateQuery(on)} limit 5`,
           (error_q, result_q) => {
-            if (!result_q)
+            if (!result_q.length)
               return reject({ cause: "bir problem oluştu , sonra dene " });
 
             //alınan soruların cevaplarını alma
             this.connection.query(
-              `select * from ${language}.cevaplar where cevap_id > ${this.#sanitizateQuery(
-                on
-              )} limit 5`,
+              `select * from ${language}.cevaplar where cevap_id 
+              ${related ? ">" : ">="} ${this.#sanitizateQuery(on)} limit 5`,
               (error_a, result_a) => {
                 const response = {
                   questions: result_q.map(
                     (q, i) => q.soru.toLowerCase().split(result_a[i].cevap) //cevabı bulunduran parça ayrıştırılır
                   ),
                   answers: [],
+                  on: result_q[0].soru_id,
                 };
+
+                //
+                console.log("-----------");
+                console.log("answers", result_a);
+                console.log("related", related, "\n\n\n");
 
                 //rastgeleliği sağlama
                 const length = result_a.length;
@@ -264,30 +330,32 @@ class Mysql {
         return reject({ cause: `${language} mevcut bir dil seçeneği değil` });
 
       this.connection.query(
-        `select cevap,cevap_id from ${language}.cevaplar where cevap_id > ${this.#sanitizateQuery(
-          on
-        )} limit 5`,
+        `select cevap,cevap_id from ${language}.cevaplar where cevap_id 
+        >
+         ${this.#sanitizateQuery(on)} limit 5`,
         (error, result) => {
+          console.log("---------------");
+          console.log("result", result);
           resolve(result);
         }
       );
     });
   }
 
-  logAnswerSolidition(accuracy, username, id, language) {
+  logAnswerSolidition(accuracy, user_id, id, language) {
     return new Promise((resolve) => {
       this.connection.query(
-        `select count(*) as count from ${language}.solves where user_id = (select id from user.user where username='${username}' limit 1) and question_id = ${id}`,
+        `select count(*) as count from ${language}.solves where user_id = ${user_id} and question_id = ${id}`,
         (error, result) => {
           //update
-          if ((result[0].count = 1)) {
+          if (result[0].count == 1) {
             return this.connection.query(
-              `update ${language}.solves set accuracy = ${accuracy} where user_id = (select id from user.user where username='${username}' limit 1) and question_id = ${id}`
+              `update ${language}.solves set accuracy = ${accuracy} where user_id = ${user_id} and question_id = ${id}`
             );
           }
           //insert
           this.connection.query(
-            `insert into ${language}.solves(user_id,question_id,accuracy) values((select id from user.user where username='${username}' limit 1),${id},${accuracy})`
+            `insert into ${language}.solves(user_id,question_id,accuracy) values(${user_id},${id},${accuracy})`
           );
           resolve();
         }
