@@ -1,5 +1,12 @@
 import { useEffect, useState } from "react";
-import { View, Text, ScrollView, StyleSheet, AsyncStorage } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  AsyncStorage,
+  Image,
+} from "react-native";
 import style from "../../style";
 import setAccessToken from "../../utils/setAccessToken";
 import Loading from "../Loading";
@@ -35,9 +42,9 @@ module.exports = ({ navigation, route }) => {
       questions.length > 0 ? questions[questions.length - 1].question_id : 0;
 
     const response = await fetch(
-      `http://10.0.2.2:8080/questions?language=${
-        route.params.language
-      }&chapter=${
+      `http://10.0.2.2:8080/questions?language=${await AsyncStorage.getItem(
+        "language"
+      )}&chapter=${
         route.params.chapter_id
       }&username=${await AsyncStorage.getItem("username")}&on=${on}`,
       requestOptions
@@ -50,27 +57,17 @@ module.exports = ({ navigation, route }) => {
         }
         setQuestions((prew) => {
           var groups = [];
-          var _state = { accuracy: true };
-          var state = _state;
 
-          //5li gruplara ayırma
-          for (var i = 5; i < data.bundle.length; i++) {
-            //tek tek accuracy kontrol etme
-            if (i % 5 == 0) {
-              /**
-              for (var j = 0; j < 5; j++) {
-                if (data.bundle[i - j].accuracy !== 1) {
-                  state.accuracy = false;
-                  break;
-                }
-              }
- */
-              //eklenti zamanı
+          var accuracyCount = 0;
+
+          for (var i = 0; i < data.bundle.length; i++) {
+            if (data.bundle[i].accuracy) ++accuracyCount;
+            if (i % 5 == 4) {
               groups.push({
-                accuracy: state.accuracy,
-                question_id: data.bundle[i - 5].id,
+                solved: accuracyCount,
+                question_id: data.bundle[i - 4].id,
               });
-              state = _state;
+              accuracyCount = 0;
             }
           }
 
@@ -89,11 +86,14 @@ module.exports = ({ navigation, route }) => {
   function scrollHandler(event) {
     const condition = Date.now() - lastRender < 2000 || !scrollable;
     if (condition) return false;
-
     const percentOfScrollPosition =
       event.nativeEvent.contentOffset.y /
       (event.nativeEvent.contentSize.height / 100);
-    if (percentOfScrollPosition >= 80) {
+    console.log(
+      event.nativeEvent.contentOffset.y /
+        (event.nativeEvent.contentSize.height / 100)
+    );
+    if (percentOfScrollPosition >= 70) {
       setReRender((prew) => prew + 1);
     }
   }
@@ -113,18 +113,37 @@ module.exports = ({ navigation, route }) => {
   if (questions.length == 0) return <Loading />;
 
   //maping questions
-  const _quesions = questions.map((data, index) => (
-    <TheQuestion {...data} index={index + 1} onTouchStart={onTouchStart} />
-  ));
+  let qst = [];
+  const _quesions = questions.map((data, index) => {
+    qst.push({ ...data, index: index + 1 });
+    if (qst.length == 2) {
+      const qst2 = qst;
+      qst = [];
+      return <CoupleQuestion data={qst2} onTouchStart={onTouchStart} />;
+    }
+  });
 
   return (
-    <ScrollView onScroll={scrollHandler} style={styles.scroll}>
-      <View style={{ paddingBottom: 76 }}>
-        {_quesions}
-
-        {!scrollable && <Text style={styles.cs}>Coming Soon ...</Text>}
+    <View style={styles.viewPort}>
+      <View
+        style={styles.goBackChaptersV}
+        onTouchEnd={() => {
+          navigation.navigate("chapters");
+        }}
+      >
+        <Text style={styles.goBackChaptersT}>← Chapters</Text>
       </View>
-    </ScrollView>
+      <Image style={styles.logo} source={require("../../Assets/vulang.png")} />
+      <View style={styles.questionContainer}>
+        <ScrollView onScroll={scrollHandler} style={styles.scrollView}>
+          {_quesions}
+
+          {!scrollable && (
+            <Text style={styles.comingSoon}>Coming Soon ...</Text>
+          )}
+        </ScrollView>
+      </View>
+    </View>
   );
 };
 
@@ -135,25 +154,37 @@ module.exports = ({ navigation, route }) => {
  *
  *
  */
+const CoupleQuestion = ({ data, onTouchStart }) => {
+  return (
+    <View style={styles.coupleQuestionWrapper}>
+      <TheQuestion {...data[0]} onTouchStart={onTouchStart} />
+      <TheQuestion {...data[1]} onTouchStart={onTouchStart} />
+    </View>
+  );
+};
 
-const TheQuestion = ({ question_id, index, accuracy, onTouchStart }) => {
+const TheQuestion = ({ question_id, index, solved, onTouchStart }) => {
+  if (!index) return <View />;
   return (
     <View
-      style={styles.question}
+      style={styles.questionWrapper}
       onTouchStart={() => {
         onTouchStart(question_id);
       }}
     >
       <Text style={styles.id}>{index}</Text>
-
-      <Text style={styles.completed}>
-        {/* 
-        impoertant!
-        API'deki chapter özel accuracy hesaplama sorunu çözüldükten sonra açılacak
-
-        {accuracy !== null ? (accuracy == 1 ? "✔️" : "❌") : "□"}
-      */}
-      </Text>
+      <View style={styles.completionWrapper}>
+        <Text style={styles.accurT}>{`${solved} / 5`}</Text>
+        <View style={styles.chapterBar}>
+          <View
+            style={{
+              backgroundColor: "#D9D9D9",
+              height: "100%",
+              width: `${solved / (5 / 100)}%`,
+            }}
+          />
+        </View>
+      </View>
     </View>
   );
 };
@@ -167,39 +198,72 @@ const TheQuestion = ({ question_id, index, accuracy, onTouchStart }) => {
  */
 
 const styles = StyleSheet.create({
-  cs: {
-    paddingTop: 25,
-    color: style.tertiary,
-    fontWeight: "500",
-    paddingLeft: "40%",
-  },
-  scroll: {
-    minHeight: "100%",
-    backgroundColor: style.primary,
+  viewPort: {
+    paddingTop: 30,
     width: "100%",
-    paddingTop: 50,
+    height: "100%",
+    paddingHorizontal: 30,
+  },
+  goBackChaptersV: {
+    backgroundColor: "white",
+    width: "40%",
+    alignItems: "center",
+    borderRadius: 10,
+    paddingVertical: 10,
+  },
+  goBackChaptersT: {
+    fontSize: 16,
+  },
+  logo: {
+    transform: [{ scale: 0.2 }],
+    position: "absolute",
+    right: -100,
+    top: -40,
+  },
+  questionContainer: {
+    backgroundColor: "white",
+    marginTop: "5%",
+    height: "90%",
+    borderRadius: 10,
+  },
+  scrollView: {
+    width: "100%",
+    height: "100%",
+    paddingHorizontal: "5%",
+    marginTop: 30,
+  },
+  coupleQuestionWrapper: {
+    display: "flex",
+    flexDirection: "row",
+    width: "100%",
+    justifyContent: "space-evenly",
+    marginBottom: 30,
+  },
+  questionWrapper: {
+    width: "40%",
+    height: 60,
+    borderWidth: 1,
+    borderColor: "gray",
+    borderRadius: 2,
+    justifyContent: "center",
+    alignItems: "center",
+    flexDirection: "row",
   },
   id: {
     fontSize: 30,
-    marginLeft: 40,
+    padding: 10,
   },
-  completed: {
-    fontSize: 35,
-    position: "absolute",
-    right: 22,
-    borderLeftWidth: 1,
-    paddingLeft: 30,
-  },
-  question: {
-    width: "80%",
-    paddingVertical: 20,
-    backgroundColor: style.secondary,
-    display: "flex",
-    flexDirection: "row",
-    borderRadius: 10,
-    marginVertical: 10,
-    marginHorizontal: "10%",
+  completionWrapper: {
+    marginLeft: 5,
+    width: 35,
     alignItems: "center",
-    position: "relative",
+  },
+  accurT: {},
+  chapterBar: {
+    width: "90%",
+    height: 5,
+    borderWidth: 1,
+    borderColor: "gray",
+    marginBottom: 3,
   },
 });

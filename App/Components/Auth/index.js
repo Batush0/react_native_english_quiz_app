@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Text, TextInput, View, AsyncStorage } from "react-native";
+import { Text, TextInput, View, AsyncStorage, Image } from "react-native";
 import style from "./style";
+// import Logo from "../../Assets/vulang.png";
 
 module.exports = function (props) {
   const [values, setValues] = useState({ username: null, password: null });
@@ -36,7 +37,7 @@ module.exports = function (props) {
     const timeout = setTimeout(() => {
       setSuccess(null);
       setViewStyle(style.view);
-      if (success == 1) props.navigation.navigate("languages");
+      if (success == 1) props.navigation.navigate("chapters");
     }, 1000);
     return () => {
       clearTimeout(timeout);
@@ -45,47 +46,78 @@ module.exports = function (props) {
 
   useEffect(() => {
     loginAttempt().then(() => {
-      props.navigation.navigate("languages");
+      props.navigation.navigate("chapters");
     });
   }, []);
 
   return (
-    <View style={viewStyle}>
-      <TextInput
-        style={style.input}
-        placeholder={"Kullanıcı Adı"}
-        value={values.username}
-        onChangeText={(text) =>
-          setValues((prew) => {
-            return { ...prew, username: text };
-          })
-        }
-      />
-      <TextInput
-        style={style.input}
-        placeholder={"Parola"}
-        value={values.password}
-        onChangeText={(text) =>
-          setValues((prew) => {
-            return { ...prew, password: text };
-          })
-        }
-      />
-      <View style={style.submitContainer} onTouchStart={handleSubmit}>
-        <Text style={{ fontSize: 16, fontWeight: "500" }}>
-          {process == "login" ? "Giriş Yap" : "Kayıt Ol"}
-        </Text>
+    <View style={style.viewPort}>
+      <View style={style.logoV}>
+        <Image
+          style={style.logoI}
+          source={require("../../Assets/vulang.png")}
+        />
       </View>
-      <View
-        onTouchStart={() => {
-          setProcess((prew) => (prew == "login" ? "register" : "login"));
-        }}
-      >
-        <Text style={style.changeView}>
-          {process == "login"
-            ? "Bir hesabın yok mu ? Hesap Oluştur"
-            : "Zaten bir hesabın mı var ? Giriş yap"}
-        </Text>
+
+      <View style={style.authContainer}>
+        <View style={style.upperSections}>
+          <View
+            onTouchEnd={() => setProcess("login")}
+            style={{
+              ...style.upperV,
+              borderBottomWidth: process == "login" ? 0 : 1,
+            }}
+          >
+            <Text style={style.upperT}>Giriş Yap</Text>
+          </View>
+          <View
+            onTouchEnd={() => setProcess("register")}
+            style={{
+              ...style.upperV,
+              borderTopRightRadius: 10,
+              borderLeftWidth: 1,
+              borderBottomWidth: process == "login" ? 1 : 0,
+            }}
+          >
+            <Text style={style.upperT}>Kayıt Ol</Text>
+          </View>
+        </View>
+        <View style={style.authInner}>
+          <View style={style.inputsV}>
+            <Text style={style.inputsT}>Kullanıcı Adı</Text>
+            <TextInput
+              style={style.inputsI}
+              placeholder="ör. Mustafa"
+              onChangeText={(text) =>
+                setValues((prew) => {
+                  return { ...prew, username: text };
+                })
+              }
+            />
+          </View>
+          <View style={style.inputsV}>
+            <Text tyle={style.inputsT}>Parola</Text>
+            <TextInput
+              style={style.inputsI}
+              placeholder="ör. m1_A*k93F.q"
+              onChangeText={(text) =>
+                setValues((prew) => {
+                  return { ...prew, password: text };
+                })
+              }
+            />
+          </View>
+          <View
+            style={{
+              ...style.submitV,
+              backgroundColor:
+                success !== null ? (success ? "#1afe17" : "#fe12a4") : "white",
+            }}
+            onTouchEnd={handleSubmit}
+          >
+            <Text style={style.submitT}>{"➜"}</Text>
+          </View>
+        </View>
       </View>
     </View>
   );
@@ -119,3 +151,52 @@ function loginAttempt() {
       });
   });
 }
+
+/** 
+  <View style={viewStyle}>
+    {/* <Image source={Logo} style={style.logo} /> }
+    <View style={style.halfOfInputs}>
+      <Text style={style.process}>
+        {process == "login" ? "Giriş yap" : "Hesap Oluştur"}
+      </Text>
+      <TextInput
+        style={style.input}
+        placeholder={"Kullanıcı Adı"}
+        value={values.username}
+        onChangeText={(text) =>
+          setValues((prew) => {
+            return { ...prew, username: text };
+          })
+        }
+      />
+      <TextInput
+        style={style.input}
+        placeholder={"Parola"}
+        value={values.password}
+        onChangeText={(text) =>
+          setValues((prew) => {
+            return { ...prew, password: text };
+          })
+        }
+      />
+    </View>
+    <View style={style.halfOfSubmits}>
+      <View style={style.submitContainer} onTouchStart={handleSubmit}>
+        <Text style={{ fontSize: 16, fontWeight: "500" }}>
+          {process == "login" ? "Giriş Yap" : "Kayıt Ol"}
+        </Text>
+      </View>
+      <View
+        onTouchStart={() => {
+          setProcess((prew) => (prew == "login" ? "register" : "login"));
+        }}
+      >
+        <Text style={style.changeView}>
+          {process == "login"
+            ? "Bir hesabın yok mu ? Hesap Oluştur"
+            : "Zaten bir hesabın mı var ? Giriş yap"}
+        </Text>
+      </View>
+    </View>
+  </View>
+*/

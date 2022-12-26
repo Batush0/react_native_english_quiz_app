@@ -7,6 +7,7 @@ import {
   PanResponder,
   AsyncStorage,
   Vibration,
+  Image,
 } from "react-native";
 import Loading from "../Loading";
 import setAccessToken from "../../utils/setAccessToken";
@@ -73,12 +74,12 @@ class Answer extends React.Component {
       !this.props.viewPort.state.suspendedAnswers[this.props.index];
 
     return (
-      <View>
+      <View style={styles._answerWrapper}>
         <Animated.View
           {...this.panResponder.panHandlers}
           style={[
             this.state.pan.getLayout(),
-            seenable ? styles.answerContainer : {},
+            seenable ? styles.answerWrapper : {},
           ]}
         >
           {seenable && (
@@ -99,6 +100,7 @@ class Answer extends React.Component {
  */
 
 module.exports = function LoadData(props) {
+  console.log(props.route.params.question_id);
   const [_data, _setData] = useState();
 
   const getData = async () => {
@@ -115,12 +117,12 @@ module.exports = function LoadData(props) {
       redirect: "follow",
     };
     const response = await fetch(
-      `http://10.0.2.2:8080/quiz?language=${
-        props.route.params.language
-      }&chapter=${props.route.params.chapter_id}&on=${
+      `http://10.0.2.2:8080/quiz?language=${await AsyncStorage.getItem(
+        "language"
+      )}&chapter=${props.route.params.chapter_id}&on=${
         props.route.params.question_id
-      }&username=${await AsyncStorage.getItem("username")}&related=${
-        props.route.params.related
+      }&username=${await AsyncStorage.getItem("username")}${
+        props.route.params.related ? "&related=true" : ""
       }`,
       requestOptions
     );
@@ -128,8 +130,12 @@ module.exports = function LoadData(props) {
     response
       .json()
       .then((payload) => {
-        console.log(payload);
+        if (payload.cause == 204)
+          return props.navigation.navigate("chapters", {
+            language: props.route.params.language,
+          });
         if (!payload.cause) _setData(payload);
+        console.log(props.route.params.question_id, payload.on);
         props.route.params.question_id = payload.on;
       })
       .catch((e) => {
@@ -148,7 +154,7 @@ module.exports = function LoadData(props) {
   if (!_data) return <Loading />;
 
   var passable = _data;
-  passable["route"] = { ...props.route.params, related: undefined };
+  passable["route"] = { ...props.route.params }; //, related: undefined };
   passable["navigation"] = props.navigation;
   return <ViewPort {...passable} />;
 };
@@ -195,19 +201,20 @@ class ViewPort extends React.Component {
 
   handleSuccess() {
     const accuracy = this.state.success;
-    this.vpStyle =
-      accuracy !== null
+    this.vpStyle = styles.viewPort;
+    /**accuracy !== null
         ? accuracy
           ? styles.vpSc
           : styles.vpFail
         : styles.viewPort;
+        */
     if (accuracy == null) return "";
 
     if (accuracy)
       return setTimeout(() => {
         this.props.navigation.navigate("questions", {
           ...this.props.route,
-          question_id: this.state.lastIndex,
+          question_id: this.props.to,
           related: true,
         });
       }, 1500);
@@ -244,6 +251,7 @@ class ViewPort extends React.Component {
         onLayout={this.setQuestionZoneValues.bind(this)}
         dropAnswer={this.dropAnswer.bind(this)}
         index={index}
+        soru_no={this.props.question_numbers[index]}
       />
     ));
   }
@@ -292,11 +300,13 @@ class ViewPort extends React.Component {
         break;
     }
     const response = await fetch(
-      `http://10.0.2.2:8080/${_process}?language=${
-        this.props.route.language
-      }&on=${
+      `http://10.0.2.2:8080/${_process}?language=${await AsyncStorage.getItem(
+        "language"
+      )}&on=${
         this.props.route.question_id
-      }&username=${await AsyncStorage.getItem("username")}`,
+      }&username=${await AsyncStorage.getItem("username")}${
+        this.props.route.related ? "&related=true" : ""
+      }`,
       requestOptions
     );
 
@@ -307,7 +317,6 @@ class ViewPort extends React.Component {
           case "check":
             this.setState({
               success: data.accuracy,
-              lastIndex: data.lastIndex,
             });
             break;
         }
@@ -335,19 +344,42 @@ class ViewPort extends React.Component {
     this.setAnswers();
     this.setQuestions();
     return (
-      <View style={this.vpStyle}>
-        <View style={styles.questionsContainer}>{this._questions}</View>
-        <View style={styles.answersContainer}>{this._answers}</View>
-        <View style={styles.controls}>
-          {/*
+      // <View style={styles.viewPort}>
+      <View>
+        <View style={styles.inner}>
+          <View style={styles.questionsContainer}>{this._questions}</View>
+          <View style={styles.answersContainer}>{this._answers}</View>
+          {this.state.suspendedAnswers.indexOf(false) == -1 && (
+            <View
+              style={styles.check}
+              onTouchEnd={() => {
+                this.submitButtons("check");
+              }}
+            >
+              <Text style={styles.check_t}>Kontrol Et</Text>
+            </View>
+          )}
           <View
+            style={styles.goBackQuestions}
             onTouchEnd={() => {
-              this.submitButtons("backward");
+              this.props.navigation.navigate("questions", {
+                chapter_id: this.props.route.chapter_id,
+              });
             }}
           >
-            <Text style={styles.submit}>⬅️</Text>
+            <Text styles={styles.goBackQuestionsT}>← Questions</Text>
           </View>
-           */}
+          <Image
+            style={styles.logo}
+            source={require("../../Assets/vulang.png")}
+          />
+        </View>
+      </View>
+    );
+  }
+}
+/**
+<View style={styles.controls}>
           <View
             onTouchEnd={() => {
               this.handleHome();
@@ -355,16 +387,8 @@ class ViewPort extends React.Component {
           >
             <Text style={styles.submit}>🏠</Text>
           </View>
-          {/*
-          <View
-            onTouchEnd={() => {
-              this.submitButtons("forward");
-            }}
-          >
-            <Text style={styles.submit}>➡️</Text>
-          </View>
-           */}
         </View>
+
         {this.state.suspendedAnswers.indexOf(false) == -1 && (
           <View
             style={styles.check}
@@ -375,11 +399,7 @@ class ViewPort extends React.Component {
             <Text style={styles.check_t}>Kontrol Et</Text>
           </View>
         )}
-      </View>
-    );
-  }
-}
-
+ */
 /**
  *
  *
@@ -409,9 +429,10 @@ class Question extends React.Component {
       <View
         onTouchEnd={() => this.dropAnswer()}
         onTouchStart={() => this.setState({ lastTouch: Date.now() })}
-        style={styles.questionContainer}
+        style={styles.questionWrapper}
         onLayout={this.props.onLayout}
       >
+        <Text style={styles.id}>{this.props.soru_no}</Text>
         <Text style={styles.question}>{`${
           this.props.question[0] ? this.props.question[0] : ""
         }  |${
@@ -423,3 +444,22 @@ class Question extends React.Component {
     );
   }
 }
+/**
+ <View style={styles._question}>
+          <View style={styles._qZone}>
+            <Text style={styles.question}>{`${
+              this.props.question[0] ? this.props.question[0] : ""
+            }`}</Text>
+          </View>
+          <View style={styles._qZone}>
+            <Text>
+              {this.props.suspendedAnswer ? this.props.suspendedAnswer : ""}
+            </Text>
+          </View>
+          <View style={styles._qZone}>
+            <Text style={styles.question}>{`${
+              this.props.question[1] ? this.props.question[1] : ""
+            }`}</Text>
+          </View>
+        </View>
+ */

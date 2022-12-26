@@ -85,30 +85,26 @@ app.get("/quiz", authenticateToken, (req, res) => {
 });
 
 app.post("/check", authenticateToken, (req, res) => {
-  const { language, on } = req.query;
+  const { language, on, related } = req.query;
   const { answers } = req.body;
   if (on == undefined || answers == undefined) return res.sendStatus(406);
   try {
     database
-      .getAnswers(language, on)
+      .getAnswers(language, on, related)
       .then((actualAnswers) => {
         var accuracyArray = [];
-        actualAnswers.forEach((actual, index) => {
-          const accuracy = answers[index] === actual.cevap.toLowerCase();
+        Object.keys(actualAnswers[0]).forEach((key, index) => {
+          const accuracy =
+            actualAnswers[0][key].toLowerCase() == answers[index];
           accuracyArray.push(accuracy);
-          database.logAnswerSolidition(
-            accuracy,
-            req.user.id,
-            actual.cevap_id,
-            language
-          );
+          database.logAnswerSolidition(accuracy, req.user.id, key, language);
         });
-
-        // res.sendStatus(202);
         const accuracy = accuracyArray.indexOf(false) == -1;
         res.json({
           accuracy: accuracy,
-          lastIndex: actualAnswers[actualAnswers.length - 1].cevap_id,
+          lastIndex: Object.keys(actualAnswers[0])[
+            Object.keys(actualAnswers[0]).length - 1
+          ],
         });
       })
       .catch((error) => {

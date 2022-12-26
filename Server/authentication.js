@@ -9,7 +9,8 @@ const crypto = require("crypto");
 
 function generateAccessToken(user, secret_access_token) {
   return jwt.sign(user, secret_access_token, {
-    expiresIn: "5m",
+    // expiresIn: "5m",
+    expiresIn: "500m",
   });
 }
 
